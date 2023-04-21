@@ -30,5 +30,14 @@ return {
 	  'nvim-telescope/telescope.nvim',
 	  tag = '0.1.0',
 	  dependencies = { {'nvim-lua/plenary.nvim'} }
-  }
+  },
+  "vifm/vifm.vim",
+  "folke/which-key.nvim",
+  { 
+    "akinsho/toggleterm.nvim", 
+    version = "*",
+    config = function()
+      require("plugin_config.toggleterm")
+    end,
+  },
 }
