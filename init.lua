@@ -1,5 +1,4 @@
-vim.g.mapleader = " "
-vim.g.maplocalleader = " "
-
-require("config")
-require("plugins-loader")
+require("config.options")
+require("config.keymaps")
+require("config.plugins")
+require("plugin_config")
