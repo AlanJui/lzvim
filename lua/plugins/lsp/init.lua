@@ -1,11 +1,5 @@
 return {
-  -- add any tools you want to have installed below
-  { "williamboman/mason.nvim" },
-  {
-    "williamboman/mason-lspconfig.nvim",
-    opts = {},
-  },
-  -- add LSP Server  to lspconfig
+  -- LSP Server
   {
     "neovim/nvim-lspconfig",
     event = { "BufReadPre", "BufNewFile" },
@@ -21,89 +15,161 @@ return {
         end,
       },
     },
-    opts = {},
-    config = function()
-      require("mason").setup()
-      require("mason-lspconfig").setup({
-        ensure_installed = {
-          "diagnosticls",
-          "emmet_ls",
-          "jsonls",
-          "lua_ls",
-          "pyright",
-          "texlab",
+    ---@class PluginLspOpts
+    opts = {
+      -- options for vim.diagnostic.config()
+      diagnostics = {
+        underline = true,
+        update_in_insert = false,
+        virtual_text = {
+          spacing = 4,
+          source = "if_many",
+          prefix = "●",
+          -- this will set set the prefix to a function that returns the diagnostics icon based on the severity
+          -- this only works on a recent 0.10.0 build. Will be set to "●" when not supported
+          -- prefix = "icons",
         },
-      })
+        severity_sort = true,
+      },
+      -- add any global capabilities here
+      capabilities = {},
+      -- Automatically format on save
+      autoformat = true,
+      -- options for vim.lsp.buf.format
+      -- `bufnr` and `filter` is handled by the LazyVim formatter,
+      -- but can be also overridden when specified
+      format = {
+        formatting_options = nil,
+        timeout_ms = nil,
+      },
+      -- LSP Server Settings
+      ---@type lspconfig.options
+      servers = {
+        jsonls = {},
+        lua_ls = {
+          -- mason = false, -- set to false if you don't want this server to be installed with mason
+          settings = {
+            Lua = {
+              workspace = {
+                checkThirdParty = false,
+              },
+              completion = {
+                callSnippet = "Replace",
+              },
+            },
+          },
+        },
+      },
+      -- you can do any additional lsp server setup here
+      -- return true if you don't want this server to be setup with lspconfig
+      ---@type table<string, fun(server:string, opts:_.lspconfig.options):boolean?>
+      setup = {
+        -- example to setup with typescript.nvim
+        -- tsserver = function(_, opts)
+        --   require("typescript").setup({ server = opts })
+        --   return true
+        -- end,
+        -- Specify * to use this function as a fallback for any server
+        -- ["*"] = function(server, opts) end,
+      },
+    },
+    ---@param opts PluginLspOpts
+    config = function(_, opts)
+      -- setup autoformat
+      require("lazyvim.plugins.lsp.format").autoformat = opts.autoformat
+      -- setup formatting and keymaps
+      require("lazyvim.util").on_attach(function(client, buffer)
+        require("lazyvim.plugins.lsp.format").on_attach(client, buffer)
+        require("lazyvim.plugins.lsp.keymaps").on_attach(client, buffer)
+      end)
 
-      require("plugins.lsp.config.lua_ls").setup()
-      require("plugins.lsp.config.emmet_ls").setup()
-      require("plugins.lsp.config.jsonls").setup()
-      require("plugins.lsp.config.pyright").setup()
-      require("plugins.lsp.config.texlab").setup()
+      -- diagnostics
+      for name, icon in pairs(require("lazyvim.config").icons.diagnostics) do
+        name = "DiagnosticSign" .. name
+        vim.fn.sign_define(name, { text = icon, texthl = name, numhl = "" })
+      end
+
+      if type(opts.diagnostics.virtual_text) == "table" and opts.diagnostics.virtual_text.prefix == "icons" then
+        opts.diagnostics.virtual_text.prefix = vim.fn.has("nvim-0.10.0") == 0 and "●"
+          or function(diagnostic)
+            local icons = require("lazyvim.config").icons.diagnostics
+            for d, icon in pairs(icons) do
+              if diagnostic.severity == vim.diagnostic.severity[d:upper()] then
+                return icon
+              end
+            end
+          end
+      end
+
+      vim.diagnostic.config(vim.deepcopy(opts.diagnostics))
+
+      local servers = opts.servers
+      local capabilities = vim.tbl_deep_extend(
+        "force",
+        {},
+        vim.lsp.protocol.make_client_capabilities(),
+        require("cmp_nvim_lsp").default_capabilities(),
+        opts.capabilities or {}
+      )
+
+      local function setup(server)
+        local server_opts = vim.tbl_deep_extend("force", {
+          capabilities = vim.deepcopy(capabilities),
+        }, servers[server] or {})
+
+        if opts.setup[server] then
+          if opts.setup[server](server, server_opts) then
+            return
+          end
+        elseif opts.setup["*"] then
+          if opts.setup["*"](server, server_opts) then
+            return
+          end
+        end
+        require("lspconfig")[server].setup(server_opts)
+      end
+
+      -- get all the servers that are available thourgh mason-lspconfig
+      local have_mason, mlsp = pcall(require, "mason-lspconfig")
+      local all_mslp_servers = {
+        "lua_ls",
+        "pyright",
+        "diagnosticls",
+        "emmet_ls",
+        "jsonls",
+      }
+      if have_mason then
+        all_mslp_servers = vim.tbl_keys(require("mason-lspconfig.mappings.server").lspconfig_to_package)
+      end
+
+      local ensure_installed = {} ---@type string[]
+      for server, server_opts in pairs(servers) do
+        if server_opts then
+          server_opts = server_opts == true and {} or server_opts
+          -- run manual setup if mason=false or if this is a server that cannot be installed with mason-lspconfig
+          if server_opts.mason == false or not vim.tbl_contains(all_mslp_servers, server) then
+            setup(server)
+          else
+            ensure_installed[#ensure_installed + 1] = server
+          end
+        end
+      end
+
+      if have_mason then
+        mlsp.setup({ ensure_installed = ensure_installed })
+        mlsp.setup_handlers({ setup })
+      end
     end,
   },
-  -- mason-null-ls
-  {
-    "jay-babu/mason-null-ls.nvim",
-    event = { "BufReadPre", "BufNewFile" },
-    dependencies = {
-      "williamboman/mason.nvim",
-      "jose-elias-alvarez/null-ls.nvim",
-    },
-    opts = {},
-  },
-  -- null-ls
+  -- null-ls: formatters
   {
     "jose-elias-alvarez/null-ls.nvim",
     event = { "BufReadPre", "BufNewFile" },
     dependencies = { "mason.nvim" },
-    config = function()
+    opts = function()
       local nls = require("null-ls")
-      local lsp_format_augroup = vim.api.nvim_create_augroup("LspFormatting", {})
-
-      local nls_on_attach = function(current_client, bufnr)
-        -- to setup format on save
-        if current_client.supports_method("textDocument/formatting") then
-          vim.api.nvim_clear_autocmds({ group = lsp_format_augroup, buffer = bufnr })
-          vim.api.nvim_create_autocmd("BufWritePre", {
-            group = lsp_format_augroup,
-            buffer = bufnr,
-            callback = function()
-              vim.lsp.buf.format({
-                filter = function(client) -- luacheck: ignore
-                  --  only use null-ls for formatting instead of lsp server
-                  return client.name == "null-ls"
-                end,
-                bufnr = bufnr,
-              })
-            end,
-          })
-        end
-      end
-
-      require("mason-null-ls").setup({
-        ensure_installed = {
-          "stylua",
-          "prettier",
-          -- "autopep8",
-          "pylint",
-          "pydocstyle",
-          "flake8",
-          "isort",
-          "black",
-          "djhtml",
-          "djlint",
-          "markdownlint",
-          "zsh",
-          "shellcheck",
-          "shfmt",
-          "jq",
-        },
-        automatic_installation = false,
-        handlers = {},
-      })
-      nls.setup({
-        on_attach = nls_on_attach,
+      return {
+        root_dir = require("null-ls.utils").root_pattern(".null-ls-root", ".neoconf.json", "Makefile", ".git"),
         sources = {
           -- YAML/JSON
           nls.builtins.diagnostics.spectral,
@@ -158,7 +224,7 @@ return {
             extra_filetypes = {},
           }),
         },
-      })
+      }
     end,
   },
 }
