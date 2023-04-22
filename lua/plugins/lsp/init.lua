@@ -1,126 +1,62 @@
 return {
   -- add any tools you want to have installed below
+  { "williamboman/mason.nvim" },
   {
-    "williamboman/mason.nvim",
-    opts = {
-      ensure_installed = {
-        'lua_ls',
-        "stylua",
-        "prettier",
-        -- "autopep8",
-        "pylint",
-        "pydocstyle",
-        "flake8",
-        "isort",
-        "black",
-        "djlint",
-        "markdownlint",
-        "shellcheck",
-        "shfmt",
-        "jq",
-        -- "djhtml",
-        -- "zsh",
-      },
-    },
+    "williamboman/mason-lspconfig.nvim",
+    opts = {},
   },
   -- add LSP Server  to lspconfig
   {
     "neovim/nvim-lspconfig",
-    opts = { },
-    config = function ()
-      require('mason').setup()
-      require('mason-lspconfig').setup()
-
-      require('lspconfig').lua_ls.setup({
-        settings = {
-          Lua = {
-            diagnostics = {
-              globals = { "vim", "hs" },
-            },
-          },
+    event = { "BufReadPre", "BufNewFile" },
+    dependencies = {
+      { "folke/neoconf.nvim", cmd = "Neoconf", config = true },
+      { "folke/neodev.nvim", opts = { experimental = { pathStrict = true } } },
+      "mason.nvim",
+      "williamboman/mason-lspconfig.nvim",
+      {
+        "hrsh7th/cmp-nvim-lsp",
+        cond = function()
+          return require("lazyvim.util").has("nvim-cmp")
+        end,
+      },
+    },
+    opts = {},
+    config = function()
+      require("mason").setup()
+      require("mason-lspconfig").setup({
+        ensure_installed = {
+          "diagnosticls",
+          "emmet_ls",
+          "jsonls",
+          "lua_ls",
+          "pyright",
+          "texlab",
         },
       })
 
-      require('lspconfig').pyright.setup({
-        settings = {
-          python = {
-            analysis = {
-              autoSearchPaths = true,
-              diagnosticMode = "workspace",
-              useLibraryCodeForTypes = true,
-            },
-          },
-        },
-      })
-
-      require('lspconfig').emmet_ls.setup({
-        filetypes = {
-          "htmldjango",
-          "html",
-          "css",
-          "scss",
-          "typescriptreact",
-          "javascriptreact",
-          "markdown",
-        },
-        init_options = {
-          html = {
-            options = {
-              ["bem.enabled"] = true,
-            },
-          },
-        },
-      })
-
-      require('lspconfig').jsonls.setup({
-        filetypes = { "json", "jsonc" },
-        commands = {
-          Format = {
-            function()
-              vim.lsp.buf.range_formatting({}, { 0, 0 }, { vim.fn.line("$"), 0 })
-            end,
-          },
-        },
-        init_options = {
-          provideFormatter = true,
-        },
-        single_file_support = true,
-      })
-
-      require('lspconfig').texlab.setup({
-        settings = {
-          texlab = {
-            auxDirectory = ".",
-            bibtexFormatter = "texlab",
-            build = {
-              args = { "-pdf", "-interaction=nonstopmode", "-synctex=1", "%f" },
-              executable = "latexmk",
-              forwardSearchAfter = false,
-              onSave = false,
-            },
-            chktex = {
-              onEdit = false,
-              onOpenAndSave = false,
-            },
-            diagnosticsDelay = 300,
-            formatterLineLength = 80,
-            forwardSearch = {
-              args = {},
-            },
-            latexFormatter = "latexindent",
-            latexindent = {
-              modifyLineBreaks = false,
-            },
-          },
-        },
-      })
-    end
+      require("plugins.lsp.config.lua_ls").setup()
+      require("plugins.lsp.config.emmet_ls").setup()
+      require("plugins.lsp.config.jsonls").setup()
+      require("plugins.lsp.config.pyright").setup()
+      require("plugins.lsp.config.texlab").setup()
+    end,
+  },
+  -- mason-null-ls
+  {
+    "jay-babu/mason-null-ls.nvim",
+    event = { "BufReadPre", "BufNewFile" },
+    dependencies = {
+      "williamboman/mason.nvim",
+      "jose-elias-alvarez/null-ls.nvim",
+    },
+    opts = {},
   },
   -- null-ls
   {
     "jose-elias-alvarez/null-ls.nvim",
     event = { "BufReadPre", "BufNewFile" },
-    -- dependencies = { "mason.nvim" },
+    dependencies = { "mason.nvim" },
     config = function()
       local nls = require("null-ls")
       local lsp_format_augroup = vim.api.nvim_create_augroup("LspFormatting", {})
@@ -145,6 +81,27 @@ return {
         end
       end
 
+      require("mason-null-ls").setup({
+        ensure_installed = {
+          "stylua",
+          "prettier",
+          -- "autopep8",
+          "pylint",
+          "pydocstyle",
+          "flake8",
+          "isort",
+          "black",
+          "djhtml",
+          "djlint",
+          "markdownlint",
+          "zsh",
+          "shellcheck",
+          "shfmt",
+          "jq",
+        },
+        automatic_installation = false,
+        handlers = {},
+      })
       nls.setup({
         on_attach = nls_on_attach,
         sources = {

@@ -1,15 +1,17 @@
+-- This file is automatically loaded by lazyvim.plugins.config
+
 local Util = require("lazyvim.util")
-local map = vim.keymap.set
--- local function map(mode, lhs, rhs, opts)
---   local keys = require("lazy.core.handler").handlers.keys
---   ---@cast keys LazyKeysHandler
---   -- do not create the keymap if a lazy keys handler exists
---   if not keys.active[keys.parse({ lhs, mode = mode }).id] then
---     opts = opts or {}
---     opts.silent = opts.silent ~= false
---     vim.keymap.set(mode, lhs, rhs, opts)
---   end
--- end
+
+local function map(mode, lhs, rhs, opts)
+  local keys = require("lazy.core.handler").handlers.keys
+  ---@cast keys LazyKeysHandler
+  -- do not create the keymap if a lazy keys handler exists
+  if not keys.active[keys.parse({ lhs, mode = mode }).id] then
+    opts = opts or {}
+    opts.silent = opts.silent ~= false
+    vim.keymap.set(mode, lhs, rhs, opts)
+  end
+end
 
 -- better up/down
 map("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
@@ -101,7 +103,7 @@ end
 -- stylua: ignore start
 
 -- toggle options
--- map("n", "<leader>uf", require("lazyvim.plugins.lsp.format").toggle, { desc = "Toggle format on Save" })
+map("n", "<leader>uf", require("lazyvim.plugins.lsp.format").toggle, { desc = "Toggle format on Save" })
 map("n", "<leader>us", function() Util.toggle("spell") end, { desc = "Toggle Spelling" })
 map("n", "<leader>uw", function() Util.toggle("wrap") end, { desc = "Toggle Word Wrap" })
 map("n", "<leader>ul", function() Util.toggle("relativenumber", true) Util.toggle("number") end, { desc = "Toggle Line Numbers" })
@@ -110,11 +112,11 @@ local conceallevel = vim.o.conceallevel > 0 and vim.o.conceallevel or 3
 map("n", "<leader>uc", function() Util.toggle("conceallevel", false, {0, conceallevel}) end, { desc = "Toggle Conceal" })
 
 -- lazygit
-map("n", "<leader>gg", function() Util.float_term({ "lazygit" }, { cwd = Util.get_root() }) end, { desc = "Lazygit (root dir)" })
-map("n", "<leader>gG", function() Util.float_term({ "lazygit" }) end, { desc = "Lazygit (cwd)" })
+map("n", "<leader>gg", function() Util.float_term({ "lazygit" }, { cwd = Util.get_root(), esc_esc = false }) end, { desc = "Lazygit (root dir)" })
+map("n", "<leader>gG", function() Util.float_term({ "lazygit" }, {esc_esc = false}) end, { desc = "Lazygit (cwd)" })
 
 -- quit
-map("n", "<leader>sq", "<cmd>qa<cr>", { desc = "Quit all" })
+map("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })
 
 -- highlights under cursor
 if vim.fn.has("nvim-0.9.0") == 1 then
@@ -124,7 +126,7 @@ end
 -- floating terminal
 map("n", "<leader>ft", function() Util.float_term(nil, { cwd = Util.get_root() }) end, { desc = "Terminal (root dir)" })
 map("n", "<leader>fT", function() Util.float_term() end, { desc = "Terminal (cwd)" })
-map("t", "<esc><esc>", "<c-\\><c-n>", {desc = "Enter Normal Mode"})
+map("t", "<esc><esc>", "<c-\\><c-n>", { desc = "Enter Normal Mode" })
 
 -- windows
 map("n", "<leader>ww", "<C-W>p", { desc = "Other window" })
@@ -134,20 +136,6 @@ map("n", "<leader>w|", "<C-W>v", { desc = "Split window right" })
 map("n", "<leader>-", "<C-W>s", { desc = "Split window below" })
 map("n", "<leader>|", "<C-W>v", { desc = "Split window right" })
 
-map("n", "<leader>wm", "<CMD>MaximizerToggle<CR>", { desc = "Max/Org Window" })
-map("n", "<leader>wc", "<CMD>close<CR>", { desc = "Close Window" })
-map("n", "<leader>wi", "<CMD>tabnew %<CR>", { desc = "Zoom-in Window" })
-map("n", "<leader>wo", "<CMD>tabclose<CR>", { desc = "Zoom-out Window" })
-map("n", "<leader>wh", "<CMD>split<CR>", { desc = "H-Split" })
-map("n", "<leader>wv", "<CMD>vsplit<CR>", { desc = "V-Split" })
-map("n", "<leader>w=", "<C-w>=", { desc = "Equal Width" })
-
--- Navigate vim panes better
-map('n', '<c-k>', ':wincmd k<CR>')
-map('n', '<c-j>', ':wincmd j<CR>')
-map('n', '<c-h>', ':wincmd h<CR>')
-map('n', '<c-l>', ':wincmd l<CR>')
-
 -- tabs
 map("n", "<leader><tab>l", "<cmd>tablast<cr>", { desc = "Last Tab" })
 map("n", "<leader><tab>f", "<cmd>tabfirst<cr>", { desc = "First Tab" })
@@ -155,50 +143,3 @@ map("n", "<leader><tab><tab>", "<cmd>tabnew<cr>", { desc = "New Tab" })
 map("n", "<leader><tab>]", "<cmd>tabnext<cr>", { desc = "Next Tab" })
 map("n", "<leader><tab>d", "<cmd>tabclose<cr>", { desc = "Close Tab" })
 map("n", "<leader><tab>[", "<cmd>tabprevious<cr>", { desc = "Previous Tab" })
-
---------------------------------------------------------------------
--- My maps
---------------------------------------------------------------------
-local keymap = vim.keymap.set
-
-keymap("i", "jj", "<Esc>")
-keymap("i", "jk", "<Esc>")
-
---------------------------------------------------------------------
--- Windows navigation
---------------------------------------------------------------------
--- Split window
-keymap("n", "<localleader>sh", ":split<CR>")
-keymap("n", "<localleader>sv", ":vsplit<CR>")
-
--- Move focus on window
-keymap("n", "<ESC>k", "<cmd>wincmd k<CR>")
-keymap("n", "<ESC>j", "<cmd>wincmd j<CR>")
-keymap("n", "<ESC>h", "<cmd>wincmd h<CR>")
-keymap("n", "<ESC>l", "<cmd>wincmd l<CR>")
-
--- keymap("n", "<C-k>", "<cmd>wincmd k<CR>")
--- keymap("n", "<C-j>", "<cmd>wincmd j<CR>")
--- keymap("n", "<C-h>", "<cmd>wincmd h<CR>")
--- keymap("n", "<C-l>", "<cmd>wincmd l<CR>")
-
--- keymap("n", "<S-Up>", "<cmd>wincmd k<CR>")
--- keymap("n", "<S-Down>", "<cmd>wincmd j<CR>")
--- keymap("n", "<S-Left>", "<cmd>wincmd h<CR>")
--- keymap("n", "<S-Right>", "<cmd>wincmd l<CR>")
-
--- Window Resize
-keymap("n", "<M-Up>", "<cmd>wincmd -<CR>")
-keymap("n", "<M-Down>", "<cmd>wincmd +<CR>")
-keymap("n", "<M-Left>", "<cmd>wincmd <<CR>")
-keymap("n", "<M-Right>", "<cmd>wincmd ><CR>")
-
---------------------------------------------------------------------
--- Buffers
---------------------------------------------------------------------
-
--- Tab navigation
--- keymap("n", "to", ":tabnew<CR>") -- open new tab
--- keymap("n", "tx", ":tabclose<CR>") -- close current tab
--- keymap("n", "tn", ":tabn<CR>") --  go to next tab
--- keymap("n", "tp", ":tabp<CR>") --  go to previous tab
